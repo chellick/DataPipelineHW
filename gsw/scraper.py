@@ -13,7 +13,9 @@ class YouTubeScraper:
         
         :param video_urls: Список URL для обработки.
         """
+
         self.video_urls = video_urls
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     async def fetch_html(self, url, session):
         """
@@ -24,28 +26,16 @@ class YouTubeScraper:
         :return: HTML содержимое страницы или None, если возникла ошибка.
         """
         try:
-            async with session.get(url, timeout=10) as response:
-                if response.status == 200:
-                    html = await response.text()
-                    logger.info(f"Successfully fetched HTML for {url}")
-                    return html
-                else:
-                    logger.error(f"Failed to fetch {url}: HTTP {response.status}")
-        except asyncio.TimeoutError:
-            logger.error(f"Timeout while fetching {url}")
+            async with session.get(url) as response:
+                response.raise_for_status()
+                html_content = await response.text()
+                self.logger.info(f"Successfully fetched HTML for {url}")
+                return html_content
         except Exception as e:
-            logger.error(f"Failed to fetch {url}: {e}")
-        return None
+            self.logger.error(f"Failed to fetch {url}: {e}")
+            return None
 
     async def get_video_data(self):
-        """
-        Загружает HTML всех страниц видео асинхронно.
-        
-        :return: Список HTML-содержимого страниц или None для URL с ошибками.
-        """
         async with aiohttp.ClientSession() as session:
             tasks = [self.fetch_html(url, session) for url in self.video_urls]
-            results = await asyncio.gather(*tasks)
-            successful = sum(1 for result in results if result is not None)
-            logger.info(f"Successfully fetched HTML for {successful}/{len(self.video_urls)} URLs")
-            return [result for result in results if result is not None]
+            return await asyncio.gather(*tasks)

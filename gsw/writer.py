@@ -14,7 +14,7 @@ class GoogleSheetWriter:
 
     @staticmethod
     def get_creds():
-        from config.settings import SERVICE_ACCOUNT_FILE  # Путь к JSON-файлу
+        from config.settings import SERVICE_ACCOUNT_FILE 
         scope = [
             'https://spreadsheets.google.com/feeds',
             'https://www.googleapis.com/auth/drive'
@@ -25,18 +25,17 @@ class GoogleSheetWriter:
         try:
             agc = await self.agcm.authorize()
             spreadsheet = await agc.open_by_key(self.sheet_id)
-            self.worksheet = await spreadsheet.get_worksheet(0)  # Получаем первый лист
+            self.worksheet = await spreadsheet.get_worksheet(0)  
             logger.info(f"Initialized spreadsheet '{self.sheet_id}'")
         except Exception as e:
             logger.error(f"Error initializing spreadsheet: {e}")
-            logger.exception(e)  # Добавлено для вывода полного стека ошибки
+            logger.exception(e)  
             raise
 
     async def write_to_sheet(self, data):
         if not self.worksheet:
             await self.init_spreadsheet()
 
-        # Формируем строки для записи
         rows = [['Title', 'Description', 'Tags', 'Channel Name', 'Views Number', 'Upload Date', 'Genre']]
         for video in data:
             rows.append([
@@ -50,11 +49,10 @@ class GoogleSheetWriter:
             ])
 
         try:
-            # Очистка и запись данных
             await self.worksheet.clear()
             await self.worksheet.append_rows(rows)
             logger.info("Data successfully written to sheet.")
         except Exception as e:
             logger.error(f"Error writing to sheet: {e}")
-            logger.exception(e)  # Добавлено для вывода полного стека ошибки
-            raise
+            logger.exception(e) 
+            raise Exception
