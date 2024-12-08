@@ -1,72 +1,58 @@
-import asyncio
-import requests
-import bs4
-import aiohttp
-import asyncio
 import logging
-import pprint
 from bs4 import BeautifulSoup
 
+logger = logging.getLogger("YouTubeParser")
+logging.basicConfig(level=logging.INFO)
 
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
-logger = logging.getLogger(__name__)
-
-class YouTubeScraper:
-    def __init__(self, video_urls):
+class YouTubeParser:
+    async def parse(self, html_content):
         """
-        Инициализация скрейпера с предоставленным списком URL видео.
+        Асинхронно парсит HTML страницы и извлекает метаданные.
         
-        :param video_urls: Список URL для обработки.
+        :param html_content: HTML содержимое страницы (str).
+        :return: Словарь с метаданными видео (dict).
         """
-        self.video_urls = video_urls
+        if not html_content:
+            logging.warning("Нет HTML-контента для парсинга.")
+            return {}
 
-    async def fetch_html(self, url, session):
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+
+            data = {
+                'title': self.safe_find(soup, 'meta', {'name': 'title'}, 'content'),
+                'description': self.safe_find(soup, 'meta', {'name': 'description'}, 'content'),
+                'tags': [tag['content'] for tag in soup.find_all('meta', property='og:video:tag')],
+                'channel_name': self.safe_find(soup, 'meta', {'itemprop': 'author'}, 'content'),
+                'views_number': self.safe_find(soup, 'meta', {'itemprop': 'interactionCount'}, 'content', convert=int),
+                'upload_date': self.safe_find(soup, 'meta', {'itemprop': 'uploadDate'}, 'content'),
+                'genre': self.safe_find(soup, 'meta', {'itemprop': 'genre'}, 'content'),
+            }
+
+            # Логирование успеха
+            logging.info("Успешно извлечены данные о видео.")
+            return data
+
+        except Exception as e:
+            logging.error(f"Ошибка парсинга HTML: {e}")
+            return {}
+
+    @staticmethod
+    def safe_find(soup, tag, attrs, attribute, convert=None):
         """
-        Асинхронно загружает HTML по предоставленному URL.
+        Безопасно ищет элемент в HTML с заданными параметрами.
         
-        :param url: URL видео.
-        :param session: Асинхронная сессия aiohttp.
-        :return: HTML содержимое страницы или None, если возникла ошибка.
+        :param soup: Объект BeautifulSoup.
+        :param tag: Название тега (str).
+        :param attrs: Атрибуты для поиска (dict).
+        :param attribute: Атрибут, значение которого нужно извлечь (str).
+        :param convert: Функция для преобразования значения (например, int).
+        :return: Значение атрибута или None.
         """
         try:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    html = await response.text()
-                    logger.info(f"Successfully fetched HTML for {url}")
-                    return html
-                else:
-                    logger.error(f"Failed to fetch {url}: HTTP {response.status}")
+            element = soup.find(tag, attrs=attrs)
+            if element and attribute in element.attrs:
+                return convert(element[attribute]) if convert else element[attribute]
         except Exception as e:
-            logger.error(f"Failed to fetch {url}: {e}")
+            logging.warning(f"Ошибка поиска {tag} с атрибутами {attrs}: {e}")
         return None
-
-    async def get_video_data(self):
-        """
-        Загружает HTML всех страниц видео асинхронно.
-        
-        :return: Список HTML-содержимого страниц или None для URL с ошибками.
-        """
-        async with aiohttp.ClientSession() as session:
-            tasks = [self.fetch_html(url, session) for url in self.video_urls]
-            results = await asyncio.gather(*tasks)
-        return results
-
-
-# urls = [
-#     "https://youtu.be/M2a1eZy5zmI?si=c_LS3liTswB4FF2L",
-#     "https://www.youtube.com/live/IWDTBX_Vk5Q?si=U6HqWUKse-VE4PKB",
-#     "https://youtu.be/t7pHGNyHbu4?si=St7qOZOfBVmVFC-E"
-# ]
-# scraper = YouTubeScraper(urls)
-
-
-
-# async def main():
-#     video_data = await scraper.get_video_data()
-#     for i, data in enumerate(video_data):
-#         print(f"Video {i + 1}: {'HTML fetched' if data else 'Failed to fetch'}")
-#         print(data)
-#         break
-
-# asyncio.run(main())

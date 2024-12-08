@@ -3,13 +3,14 @@ from gspread_asyncio import AsyncioGspreadClientManager
 from oauth2client.service_account import ServiceAccountCredentials
 
 logger = logging.getLogger("GoogleSheetWriter")
+logging.basicConfig(level=logging.INFO)
+
 
 class GoogleSheetWriter:
-    def __init__(self, spreadsheet_id, worksheet_name='YouTube Data'):
+    def __init__(self, spreadsheet_id):
         self.sheet_id = spreadsheet_id
-        self.worksheet_name = worksheet_name
-        self.sheet = None
         self.agcm = AsyncioGspreadClientManager(self.get_creds)
+        self.worksheet = None
 
     @staticmethod
     def get_creds():
@@ -18,23 +19,24 @@ class GoogleSheetWriter:
             'https://spreadsheets.google.com/feeds',
             'https://www.googleapis.com/auth/drive'
         ]
-        
         return ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
 
     async def init_spreadsheet(self):
         try:
             agc = await self.agcm.authorize()
             spreadsheet = await agc.open_by_key(self.sheet_id)
-            self.sheet = await spreadsheet.worksheet(self.worksheet_name)
+            self.worksheet = await spreadsheet.get_worksheet(0)  # Получаем первый лист
             logger.info(f"Initialized spreadsheet '{self.sheet_id}'")
         except Exception as e:
             logger.error(f"Error initializing spreadsheet: {e}")
+            logger.exception(e)  # Добавлено для вывода полного стека ошибки
             raise
 
     async def write_to_sheet(self, data):
-        if not self.sheet:
+        if not self.worksheet:
             await self.init_spreadsheet()
 
+        # Формируем строки для записи
         rows = [['Title', 'Description', 'Tags', 'Channel Name', 'Views Number', 'Upload Date', 'Genre']]
         for video in data:
             rows.append([
@@ -48,9 +50,11 @@ class GoogleSheetWriter:
             ])
 
         try:
-            await self.sheet.clear()
-            await self.sheet.append_rows(rows)
-            logger.info("Data written to sheet.")
+            # Очистка и запись данных
+            await self.worksheet.clear()
+            await self.worksheet.append_rows(rows)
+            logger.info("Data successfully written to sheet.")
         except Exception as e:
             logger.error(f"Error writing to sheet: {e}")
+            logger.exception(e)  # Добавлено для вывода полного стека ошибки
             raise
