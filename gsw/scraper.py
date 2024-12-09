@@ -2,8 +2,6 @@ import asyncio
 import logging
 import aiohttp
 
-logger = logging.getLogger("YouTubeScraper")
-logging.basicConfig(level=logging.INFO)
 
 
 class YouTubeScraper:

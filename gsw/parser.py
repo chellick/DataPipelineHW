@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("YouTubeParser")
+logger = logging.getLogger(__name__)
 
 class YouTubeParser:
     async def parse(self, html_content):

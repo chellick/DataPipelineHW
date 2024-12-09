@@ -2,7 +2,7 @@ import logging
 from gspread_asyncio import AsyncioGspreadClientManager
 from oauth2client.service_account import ServiceAccountCredentials
 
-logger = logging.getLogger("GoogleSheetWriter")
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
