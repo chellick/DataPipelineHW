@@ -51,7 +51,9 @@ Run the pipeline:
 ```bash
 python main.py
 ```
+![Диаграмма без названия drawio](https://github.com/user-attachments/assets/4bf3a175-e1f8-49f0-8479-5c5ad126fb39)
 
 
 
-![](temp/dd.svg)
+
+
